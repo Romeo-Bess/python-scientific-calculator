@@ -1,101 +1,214 @@
-import tkinter as tk
+import customtkinter as ctk
 import math
 
-root = tk.Tk()
-root.title("Sci Calculator")
-root.geometry("450x800")
-root.resizable(False, False)
-root.config(bg="lightgray")  # simple clean background
+# Set appearance mode and color theme
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
 
-# title label
-title_label = tk.Label(root, text="Scientific Calculator", font=("Arial", 24, "bold"), bg="lightgray")
-title_label.pack(pady=(10,5))
+class ScientificCalculator(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-# input field
-entry = tk.Entry(root, width=18, font=('Arial', 28))
-entry.pack(pady=(10,5))
+        self.title("Sci Calculator Pro")
+        self.geometry("450x820")
+        self.resizable(False, False)
+        
+        # Color Palette - Evolved Soft UI / Dark Mode
+        self.bg_color = "#1C1917"          # Dark Charcoal
+        self.display_bg = "#12100E"        # Deep Charcoal display
+        self.btn_num_bg = "#2C2A29"        # Number buttons
+        self.btn_num_hover = "#3E3C3B"
+        self.btn_op_bg = "#EA580C"         # Orange for basic ops
+        self.btn_op_hover = "#F97316"
+        self.btn_fn_bg = "#44403C"         # Muted brown/gray for scientific fns
+        self.btn_fn_hover = "#57534E"
+        self.btn_eq_bg = "#2563EB"         # Blue for "="
+        self.btn_eq_hover = "#3B82F6"
+        self.btn_clear_bg = "#DC2626"      # Red for "C"
+        self.btn_clear_hover = "#EF4444"
+        
+        self.config(bg=self.bg_color)
+        self.configure(fg_color=self.bg_color)
 
-# history box
-history = tk.Text(root, height=8, width=55, font=('Arial', 12))
-history.pack()
-history.insert(tk.END, "History:\n")
-history.config(state=tk.DISABLED)
+        # Header Title
+        self.title_label = ctk.CTkLabel(
+            self, 
+            text="SCIENTIFIC CALCULATOR", 
+            font=("Inter", 16, "bold"), 
+            text_color="#A8A29E"
+        )
+        self.title_label.pack(pady=(15, 5))
 
-# frame for buttons
-btn_frame = tk.Frame(root, bg="lightgray")
-btn_frame.pack(pady=20)
+        # Main display frame
+        display_frame = ctk.CTkFrame(self, fg_color=self.display_bg, corner_radius=12)
+        display_frame.pack(padx=20, pady=10, fill="x")
 
-def click(txt):
-    s = entry.get()
-    entry.delete(0, tk.END)
-    entry.insert(0, s + txt)
+        # History display (Scrolling Text Box)
+        self.history_box = ctk.CTkTextbox(
+            display_frame, 
+            height=120, 
+            font=("Inter", 12), 
+            fg_color="transparent", 
+            text_color="#78716C",
+            wrap="word"
+        )
+        self.history_box.pack(padx=10, pady=(10, 5), fill="both", expand=True)
+        self.history_box.insert("1.0", "History:\n")
+        self.history_box.configure(state="disabled")
 
-def clear():
-    entry.delete(0, tk.END)
+        # Active Expression Display
+        self.entry = ctk.CTkEntry(
+            display_frame, 
+            placeholder_text="0",
+            font=("Inter", 32, "bold"), 
+            fg_color="transparent", 
+            border_width=0, 
+            text_color="#FFFFFF",
+            justify="right"
+        )
+        self.entry.pack(padx=10, pady=(5, 15), fill="x")
+        self.entry.bind("<Key>", lambda e: "break")  # Read-only input via keyboard mapping instead
 
-def calc():
-    try:
-        expr = entry.get()
-        res = eval(expr)
-        entry.delete(0, tk.END)
-        entry.insert(0, str(res))
-        history.config(state=tk.NORMAL)
-        history.insert(tk.END, f"{expr} = {res}\n")
-        history.config(state=tk.DISABLED)
-    except:
-        entry.delete(0, tk.END)
-        entry.insert(0, "Error")
+        # Frame for buttons
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.pack(padx=20, pady=(10, 20), fill="both", expand=True)
 
-# button layout
-buttons = [
-    ['7','8','9','/'],
-    ['4','5','6','*'],
-    ['1','2','3','-'],
-    ['0','.','=','+'],
-    ['C','(',')','√'],
-    ['sin','cos','tan','log'],
-    ['exp','pi']
-]
+        # Buttons layout
+        buttons = [
+            ['7', '8', '9', '/'],
+            ['4', '5', '6', '*'],
+            ['1', '2', '3', '-'],
+            ['0', '.', '=', '+'],
+            ['C', '(', ')', '√'],
+            ['sin', 'cos', 'tan', 'log'],
+            ['exp', 'pi', 'del', 'clear_hist']
+        ]
 
-# hover effect
-def on_enter(e):
-    e.widget['bg'] = "#a9a9a9"
+        # Configure columns and rows to be equal weight
+        for col in range(4):
+            btn_frame.columnconfigure(col, weight=1, pad=8)
+        for row in range(len(buttons)):
+            btn_frame.rowconfigure(row, weight=1, pad=8)
 
-def on_leave(e, original_color):
-    e.widget['bg'] = original_color
+        # Generate Buttons
+        for r, row in enumerate(buttons):
+            for c, char in enumerate(row):
+                btn_text = char
+                # Style mappings
+                if char in '0123456789.':
+                    bg = self.btn_num_bg
+                    hover = self.btn_num_hover
+                    fg = "#FFFFFF"
+                elif char in ['/', '*', '-', '+']:
+                    bg = self.btn_op_bg
+                    hover = self.btn_op_hover
+                    fg = "#FFFFFF"
+                elif char == '=':
+                    bg = self.btn_eq_bg
+                    hover = self.btn_eq_hover
+                    fg = "#FFFFFF"
+                elif char in ['C', 'del']:
+                    bg = self.btn_clear_bg
+                    hover = self.btn_clear_hover
+                    fg = "#FFFFFF"
+                elif char == 'clear_hist':
+                    bg = "#451A03"
+                    hover = "#78350F"
+                    fg = "#FDBA74"
+                    btn_text = "cls hist"
+                else:
+                    bg = self.btn_fn_bg
+                    hover = self.btn_fn_hover
+                    fg = "#E7E5E4"
+                    if char == 'pi':
+                        btn_text = "π"
 
-# create buttons
-for r, row in enumerate(buttons):
-    for c, char in enumerate(row):
-        # button colors
-        if char in '0123456789.':
-            color = "#e0e0e0"  # numbers
-        else:
-            color = "#f0a500"  # functions
+                # Define commands
+                if char == '=':
+                    cmd = self.calculate
+                elif char == 'C':
+                    cmd = self.clear_entry
+                elif char == 'del':
+                    cmd = self.delete_char
+                elif char == 'clear_hist':
+                    cmd = self.clear_history
+                elif char == '√':
+                    cmd = lambda: self.insert_text("math.sqrt(")
+                elif char == 'sin':
+                    cmd = lambda: self.insert_text("math.sin(math.radians(")
+                elif char == 'cos':
+                    cmd = lambda: self.insert_text("math.cos(math.radians(")
+                elif char == 'tan':
+                    cmd = lambda: self.insert_text("math.tan(math.radians(")
+                elif char == 'log':
+                    cmd = lambda: self.insert_text("math.log10(")
+                elif char == 'exp':
+                    cmd = lambda: self.insert_text("math.exp(")
+                elif char == 'pi':
+                    cmd = lambda: self.insert_text(str(math.pi))
+                else:
+                    cmd = lambda txt=char: self.insert_text(txt)
 
-        if char == '=':
-            b = tk.Button(btn_frame, text='=', width=5, height=2, bg="#4CAF50", fg="white", command=calc)
-        elif char == 'C':
-            b = tk.Button(btn_frame, text='C', width=5, height=2, bg="#f44336", fg="white", command=clear)
-        elif char == '√':
-            b = tk.Button(btn_frame, text='√', width=5, height=2, bg=color, command=lambda: click("math.sqrt("))
-        elif char == 'sin':
-            b = tk.Button(btn_frame, text='sin', width=5, height=2, bg=color, command=lambda: click("math.sin(math.radians("))
-        elif char == 'cos':
-            b = tk.Button(btn_frame, text='cos', width=5, height=2, bg=color, command=lambda: click("math.cos(math.radians("))
-        elif char == 'tan':
-            b = tk.Button(btn_frame, text='tan', width=5, height=2, bg=color, command=lambda: click("math.tan(math.radians("))
-        elif char == 'log':
-            b = tk.Button(btn_frame, text='log', width=5, height=2, bg=color, command=lambda: click("math.log10("))
-        elif char == 'exp':
-            b = tk.Button(btn_frame, text='exp', width=5, height=2, bg=color, command=lambda: click("math.exp("))
-        elif char == 'pi':
-            b = tk.Button(btn_frame, text='π', width=5, height=2, bg=color, command=lambda: click(str(math.pi)))
-        else:
-            b = tk.Button(btn_frame, text=char, width=5, height=2, bg=color, command=lambda txt=char: click(txt))
+                btn = ctk.CTkButton(
+                    btn_frame, 
+                    text=btn_text, 
+                    font=("Inter", 16, "bold"),
+                    fg_color=bg, 
+                    hover_color=hover, 
+                    text_color=fg, 
+                    height=52,
+                    corner_radius=8,
+                    command=cmd
+                )
+                btn.grid(row=r, column=c, padx=4, pady=4, sticky="nsew")
 
-        b.bind("<Enter>", on_enter)
-        b.bind("<Leave>", lambda e, col=color: on_leave(e, col))
-        b.grid(row=r, column=c, padx=5, pady=5)
+    def insert_text(self, txt):
+        current = self.entry.get()
+        self.entry.delete(0, "end")
+        self.entry.insert(0, current + txt)
 
-root.mainloop()
+    def clear_entry(self):
+        self.entry.delete(0, "end")
+
+    def delete_char(self):
+        current = self.entry.get()
+        if current:
+            self.entry.delete(0, "end")
+            self.entry.insert(0, current[:-1])
+
+    def clear_history(self):
+        self.history_box.configure(state="normal")
+        self.history_box.delete("1.0", "end")
+        self.history_box.insert("1.0", "History:\n")
+        self.history_box.configure(state="disabled")
+
+    def calculate(self):
+        try:
+            expr = self.entry.get()
+            if not expr.strip():
+                return
+            # Safety evaluation check / execution
+            res = eval(expr, {"__builtins__": None, "math": math})
+            
+            # Format float output nicely if it is a float
+            if isinstance(res, float):
+                if res.is_integer():
+                    res = int(res)
+                else:
+                    res = round(res, 8)
+            
+            self.entry.delete(0, "end")
+            self.entry.insert(0, str(res))
+            
+            # Update history log
+            self.history_box.configure(state="normal")
+            self.history_box.insert("end", f"{expr} = {res}\n")
+            self.history_box.see("end")
+            self.history_box.configure(state="disabled")
+        except Exception as e:
+            self.entry.delete(0, "end")
+            self.entry.insert(0, "Error")
+
+if __name__ == "__main__":
+    app = ScientificCalculator()
+    app.mainloop()
