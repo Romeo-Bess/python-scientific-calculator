@@ -4,6 +4,7 @@ import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import sympy as sp
 
 # App configuration
 ctk.set_appearance_mode("Dark")
@@ -13,8 +14,8 @@ class AdvancedCalculatorSuite(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Scientific & Graphing Calculator Suite")
-        self.geometry("550x850")
+        self.title("Scientific & Graphing CAS Calculator")
+        self.geometry("580x880")
         self.resizable(False, False)
 
         # Color System
@@ -36,7 +37,7 @@ class AdvancedCalculatorSuite(ctk.CTk):
         # Header Title
         self.header_label = ctk.CTkLabel(
             self,
-            text="CALCULATOR SUITE PRO",
+            text="ADVANCED CAS SUITE",
             font=("Inter", 18, "bold"),
             text_color="#A8A29E"
         )
@@ -48,11 +49,13 @@ class AdvancedCalculatorSuite(ctk.CTk):
 
         # Add tabs
         self.tab_calc = self.tabview.add("Calculator")
+        self.tab_cas = self.tabview.add("CAS (Calculus/Algebra)")
         self.tab_graph = self.tabview.add("Grapher")
         self.tab_convert = self.tabview.add("Converter")
         self.tab_solver = self.tabview.add("Solver")
 
         self.setup_calculator_tab()
+        self.setup_cas_tab()
         self.setup_grapher_tab()
         self.setup_converter_tab()
         self.setup_solver_tab()
@@ -258,8 +261,8 @@ class AdvancedCalculatorSuite(ctk.CTk):
             self.entry.insert(0, "Error")
 
     def handle_keyboard_input(self, event):
-        # Prevent input if active focus is inside other tab entry fields
         focused_widget = self.focus_get()
+        # Allow typing in other Entry fields naturally
         if isinstance(focused_widget, ctk.CTkEntry) and focused_widget != self.entry:
             return
 
@@ -275,13 +278,147 @@ class AdvancedCalculatorSuite(ctk.CTk):
         elif keysym == "Escape":
             self.clear_entry()
 
+    # ================= CAS TAB =================
+    def setup_cas_tab(self):
+        # Input Expression section
+        inp_frame = ctk.CTkFrame(self.tab_cas, fg_color="transparent")
+        inp_frame.pack(fill="x", padx=15, pady=10)
+
+        expr_label = ctk.CTkLabel(inp_frame, text="Math Expression (use x):", font=("Inter", 14, "bold"), text_color="#A8A29E")
+        expr_label.pack(anchor="w", pady=(5, 5))
+
+        self.cas_entry = ctk.CTkEntry(
+            inp_frame, 
+            placeholder_text="e.g. x**2 - 5*x + 6   or   sin(x)", 
+            font=("Inter", 16),
+            height=45
+        )
+        self.cas_entry.pack(fill="x", pady=5)
+        self.cas_entry.insert(0, "x**2 - 5*x + 6")
+
+        # Action Buttons Grid
+        act_frame = ctk.CTkFrame(self.tab_cas, fg_color="transparent")
+        act_frame.pack(fill="x", padx=15, pady=10)
+
+        for col in range(2):
+            act_frame.columnconfigure(col, weight=1, pad=10)
+
+        btn_solve = ctk.CTkButton(
+            act_frame, text="Solve for x", font=("Inter", 14, "bold"),
+            fg_color=self.btn_op_bg, hover_color=self.btn_op_hover,
+            height=40, command=self.cas_solve
+        )
+        btn_solve.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+
+        btn_diff = ctk.CTkButton(
+            act_frame, text="Derivative (d/dx)", font=("Inter", 14, "bold"),
+            fg_color=self.btn_fn_bg, hover_color=self.btn_fn_hover,
+            height=40, command=self.cas_diff
+        )
+        btn_diff.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        btn_int = ctk.CTkButton(
+            act_frame, text="Integral (∫ dx)", font=("Inter", 14, "bold"),
+            fg_color=self.btn_fn_bg, hover_color=self.btn_fn_hover,
+            height=40, command=self.cas_integrate
+        )
+        btn_int.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+
+        btn_simp = ctk.CTkButton(
+            act_frame, text="Simplify", font=("Inter", 14, "bold"),
+            fg_color=self.btn_fn_bg, hover_color=self.btn_fn_hover,
+            height=40, command=self.cas_simplify
+        )
+        btn_simp.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+
+        # Result Display Area
+        res_frame = ctk.CTkFrame(self.tab_cas, fg_color=self.display_bg, corner_radius=12)
+        res_frame.pack(fill="both", expand=True, padx=15, pady=10)
+
+        res_title = ctk.CTkLabel(res_frame, text="CAS Symbolic Output:", font=("Inter", 12, "bold"), text_color="#78716C")
+        res_title.pack(anchor="w", padx=15, pady=(15, 5))
+
+        self.cas_output = ctk.CTkTextbox(
+            res_frame, 
+            font=("Consolas", 16, "bold"), 
+            fg_color="transparent", 
+            text_color="#FFFFFF"
+        )
+        self.cas_output.pack(fill="both", expand=True, padx=15, pady=(5, 15))
+        self.cas_output.insert("1.0", "Results will display here...")
+        self.cas_output.configure(state="disabled")
+
+    def update_cas_output(self, text):
+        self.cas_output.configure(state="normal")
+        self.cas_output.delete("1.0", "end")
+        self.cas_output.insert("1.0", text)
+        self.cas_output.configure(state="disabled")
+
+    def cas_solve(self):
+        try:
+            expr_str = self.cas_entry.get().strip()
+            if not expr_str:
+                return
+            x = sp.Symbol('x')
+            
+            # If user included an "=", split it and move everything to LHS
+            if "=" in expr_str:
+                lhs, rhs = expr_str.split("=")
+                eq = sp.sympify(lhs) - sp.sympify(rhs)
+            else:
+                eq = sp.sympify(expr_str)
+
+            solutions = sp.solve(eq, x)
+            output = f"Solving: {eq} = 0\n\nRoots found:\n"
+            for idx, sol in enumerate(solutions, 1):
+                output += f"x{idx} = {sol}\n"
+            self.update_cas_output(output)
+        except Exception as e:
+            self.update_cas_output(f"Error solving equation:\n{str(e)}")
+
+    def cas_diff(self):
+        try:
+            expr_str = self.cas_entry.get().strip()
+            if not expr_str:
+                return
+            x = sp.Symbol('x')
+            expr = sp.sympify(expr_str)
+            derivative = sp.diff(expr, x)
+            output = f"d/dx [ {expr} ]\n\n= {derivative}"
+            self.update_cas_output(output)
+        except Exception as e:
+            self.update_cas_output(f"Error differentiating:\n{str(e)}")
+
+    def cas_integrate(self):
+        try:
+            expr_str = self.cas_entry.get().strip()
+            if not expr_str:
+                return
+            x = sp.Symbol('x')
+            expr = sp.sympify(expr_str)
+            integral = sp.integrate(expr, x)
+            output = f"∫ [ {expr} ] dx\n\n= {integral} + C"
+            self.update_cas_output(output)
+        except Exception as e:
+            self.update_cas_output(f"Error integrating:\n{str(e)}")
+
+    def cas_simplify(self):
+        try:
+            expr_str = self.cas_entry.get().strip()
+            if not expr_str:
+                return
+            expr = sp.sympify(expr_str)
+            simplified = sp.simplify(expr)
+            output = f"Simplifying: {expr}\n\n= {simplified}"
+            self.update_cas_output(output)
+        except Exception as e:
+            self.update_cas_output(f"Error simplifying:\n{str(e)}")
+
     # ================= GRAPHER TAB =================
     def setup_grapher_tab(self):
-        # Config options
         control_frame = ctk.CTkFrame(self.tab_graph, fg_color="transparent")
         control_frame.pack(fill="x", padx=10, pady=10)
 
-        # Label & Entry for function f(x)
         fn_label = ctk.CTkLabel(control_frame, text="f(x) =", font=("Inter", 16, "bold"), text_color="#A8A29E")
         fn_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
@@ -294,7 +431,6 @@ class AdvancedCalculatorSuite(ctk.CTk):
         self.graph_fn_entry.grid(row=0, column=1, padx=5, pady=5)
         self.graph_fn_entry.insert(0, "math.sin(x)")
 
-        # X min/max ranges
         range_label = ctk.CTkLabel(control_frame, text="X range:", font=("Inter", 12), text_color="#78716C")
         range_label.grid(row=1, column=0, padx=5, pady=5, sticky="w")
 
@@ -317,11 +453,9 @@ class AdvancedCalculatorSuite(ctk.CTk):
         )
         plot_btn.grid(row=0, column=2, rowspan=2, padx=10, pady=5)
 
-        # Plot output Canvas Frame
         self.plot_frame = ctk.CTkFrame(self.tab_graph, fg_color=self.display_bg, corner_radius=12)
         self.plot_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Empty initial plot setup
         self.fig = Figure(figsize=(5, 4), dpi=100, facecolor=self.display_bg)
         self.ax = self.fig.add_subplot(111)
         self.ax.set_facecolor(self.display_bg)
@@ -345,7 +479,6 @@ class AdvancedCalculatorSuite(ctk.CTk):
             if xmin >= xmax:
                 return
 
-            # Generate datapoints
             steps = 500
             x_vals = []
             y_vals = []
@@ -354,7 +487,6 @@ class AdvancedCalculatorSuite(ctk.CTk):
             for i in range(steps + 1):
                 x = xmin + i * dx
                 try:
-                    # Safely calculate expression y for given x
                     context = {"x": x, "math": math, "sin": math.sin, "cos": math.cos, "tan": math.tan, "pi": math.pi, "e": math.e}
                     y = eval(fn_str, {"__builtins__": None}, context)
                     x_vals.append(x)
@@ -373,13 +505,11 @@ class AdvancedCalculatorSuite(ctk.CTk):
             self.ax.grid(True, color='#2C2A29')
             self.canvas.draw()
 
-        except Exception as e:
-            # Revert to error label or state
+        except Exception:
             pass
 
     # ================= CONVERTER TAB =================
     def setup_converter_tab(self):
-        # Convert type selection
         sel_frame = ctk.CTkFrame(self.tab_convert, fg_color="transparent")
         sel_frame.pack(fill="x", padx=20, pady=15)
 
@@ -395,11 +525,9 @@ class AdvancedCalculatorSuite(ctk.CTk):
         )
         self.conv_category.pack(side="left", padx=10)
 
-        # Input & Output frame
         conv_grid = ctk.CTkFrame(self.tab_convert, fg_color=self.display_bg, corner_radius=12)
         conv_grid.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # From Frame
         from_frame = ctk.CTkFrame(conv_grid, fg_color="transparent")
         from_frame.pack(fill="x", padx=20, pady=20)
 
@@ -411,11 +539,9 @@ class AdvancedCalculatorSuite(ctk.CTk):
         self.from_unit_combo = ctk.CTkComboBox(from_frame, values=["Meters", "Feet", "Inches", "Miles"], width=120)
         self.from_unit_combo.pack(side="right", padx=5)
 
-        # Arrow indicator
         arrow_label = ctk.CTkLabel(conv_grid, text="↓", font=("Inter", 28), text_color="#EA580C")
         arrow_label.pack(pady=5)
 
-        # To Frame
         to_frame = ctk.CTkFrame(conv_grid, fg_color="transparent")
         to_frame.pack(fill="x", padx=20, pady=20)
 
@@ -425,7 +551,6 @@ class AdvancedCalculatorSuite(ctk.CTk):
         self.to_unit_combo = ctk.CTkComboBox(to_frame, values=["Meters", "Feet", "Inches", "Miles"], width=120)
         self.to_unit_combo.pack(side="right", padx=5)
 
-        # Trigger initial conversion setup
         self.update_converter_units("Length")
 
     def update_converter_units(self, category):
@@ -452,20 +577,16 @@ class AdvancedCalculatorSuite(ctk.CTk):
             res = 0.0
 
             if category == "Length":
-                # Convert to base (Meters)
                 to_meters = {"Meters": 1.0, "Feet": 0.3048, "Inches": 0.0254, "Miles": 1609.34}
                 base = val * to_meters.get(unit_from, 1.0)
-                # Convert from base to target
                 from_meters = {"Meters": 1.0, "Feet": 3.28084, "Inches": 39.3701, "Miles": 0.000621371}
                 res = base * from_meters.get(unit_to, 1.0)
             elif category == "Weight":
-                # Convert to base (Grams)
                 to_grams = {"Grams": 1.0, "Kilograms": 1000.0, "Pounds": 453.592, "Ounces": 28.3495}
                 base = val * to_grams.get(unit_from, 1.0)
                 from_grams = {"Grams": 1.0, "Kilograms": 0.001, "Pounds": 0.00220462, "Ounces": 0.035274}
                 res = base * from_grams.get(unit_to, 1.0)
             else: # Temperature
-                # Convert to Celsius
                 if unit_from == "Celsius":
                     c = val
                 elif unit_from == "Fahrenheit":
@@ -473,7 +594,6 @@ class AdvancedCalculatorSuite(ctk.CTk):
                 else: # Kelvin
                     c = val - 273.15
 
-                # Convert Celsius to Target
                 if unit_to == "Celsius":
                     res = c
                 elif unit_to == "Fahrenheit":
@@ -487,7 +607,6 @@ class AdvancedCalculatorSuite(ctk.CTk):
 
     # ================= SOLVER TAB =================
     def setup_solver_tab(self):
-        # Choose Solver Type
         sel_frame = ctk.CTkFrame(self.tab_solver, fg_color="transparent")
         sel_frame.pack(fill="x", padx=20, pady=15)
 
@@ -500,11 +619,9 @@ class AdvancedCalculatorSuite(ctk.CTk):
         )
         self.solver_mode.pack(fill="x", padx=10)
 
-        # Solver inputs frame
         self.solver_grid = ctk.CTkFrame(self.tab_solver, fg_color=self.display_bg, corner_radius=12)
         self.solver_grid.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # Placeholder label for solving output
         self.solve_res_label = ctk.CTkLabel(
             self.tab_solver, 
             text="Enter coefficients and click Solve", 
@@ -513,16 +630,13 @@ class AdvancedCalculatorSuite(ctk.CTk):
         )
         self.solve_res_label.pack(pady=15)
 
-        # Trigger Initial Layout
         self.toggle_solver_view("Quadratic Equation")
 
     def toggle_solver_view(self, mode):
-        # Clear solver grid
         for child in self.solver_grid.winfo_children():
             child.destroy()
 
         if mode == "Quadratic Equation":
-            # ax^2 + bx + c = 0
             title = ctk.CTkLabel(self.solver_grid, text="ax² + bx + c = 0", font=("Inter", 16, "bold"), text_color="#EA580C")
             title.pack(pady=10)
 
@@ -548,16 +662,12 @@ class AdvancedCalculatorSuite(ctk.CTk):
             solve_btn.pack(pady=15)
 
         else:
-            # 2x2 System:
-            # a1x + b1y = c1
-            # a2x + b2y = c2
             title = ctk.CTkLabel(self.solver_grid, text="System: ax + by = c", font=("Inter", 16, "bold"), text_color="#EA580C")
             title.pack(pady=10)
 
             inp_frame = ctk.CTkFrame(self.solver_grid, fg_color="transparent")
             inp_frame.pack(pady=10)
 
-            # Eq 1
             ctk.CTkLabel(inp_frame, text="Eq 1:").grid(row=0, column=0, padx=5, pady=5)
             self.entry_a1 = ctk.CTkEntry(inp_frame, width=50, placeholder_text="a1")
             self.entry_a1.grid(row=0, column=1, padx=2, pady=5)
@@ -571,7 +681,6 @@ class AdvancedCalculatorSuite(ctk.CTk):
             self.entry_c1.grid(row=0, column=5, padx=2, pady=5)
             self.entry_c1.insert(0, "8")
 
-            # Eq 2
             ctk.CTkLabel(inp_frame, text="Eq 2:").grid(row=1, column=0, padx=5, pady=5)
             self.entry_a2 = ctk.CTkEntry(inp_frame, width=50, placeholder_text="a2")
             self.entry_a2.grid(row=1, column=1, padx=2, pady=5)
@@ -579,7 +688,6 @@ class AdvancedCalculatorSuite(ctk.CTk):
             ctk.CTkLabel(inp_frame, text="x -").grid(row=1, column=2, padx=2, pady=5)
             self.entry_b2 = ctk.CTkEntry(inp_frame, width=50, placeholder_text="b2")
             self.entry_b2.grid(row=1, column=3, padx=2, pady=5)
-            self.entry_b2.insert(0, "1")  # represents -1y implicitly, let's keep inputs absolute coefficients
             self.entry_b2.insert(0, "-1")
             ctk.CTkLabel(inp_frame, text="y =").grid(row=1, column=4, padx=2, pady=5)
             self.entry_c2 = ctk.CTkEntry(inp_frame, width=50, placeholder_text="c2")
@@ -621,12 +729,9 @@ class AdvancedCalculatorSuite(ctk.CTk):
             c1 = float(self.entry_c1.get())
 
             a2 = float(self.entry_a2.get())
-            # Clean up default duplicate prepended value if present
-            b2_str = self.entry_b2.get()
-            b2 = float(b2_str)
+            b2 = float(self.entry_b2.get())
             c2 = float(self.entry_c2.get())
 
-            # Cramer's Rule
             D = a1 * b2 - b1 * a2
             if D == 0:
                 self.solve_res_label.configure(text="No unique solution (Determinant = 0)")
